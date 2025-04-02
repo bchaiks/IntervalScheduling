@@ -98,18 +98,6 @@ class Solver:
 		
 		return()
 
-	def AddDummyPlan(self, day, length):
-		self.DummyOptimizedAssignments[(day,length)] = {}
-		
-		for i in self.Inputs.JobDict:
-			if i in self.DummyJobs:
-				continue
-			
-			for j in self.Inputs.Rooms:
-				if self.Model.getVal(self.AssignmentVars[i,j]) > 0.99:
-					self.DummyOptimizedAssignments[(day,length)][i] = j
-						
-		return()
 
 	def GenerateCliques(self):	
 		self.Cliques = []
