@@ -22,11 +22,11 @@ rs = sd.RawSchedule(sFile, rFile)
 
 # process raw data into input format
 data = sd.InputData()
-data.FillRealStayInfo(rs)
+data.FillRealJobInfo(rs)
 data.FillAdjacencyInfo(rs)
 
 data.FillStartAndEndInfo(rs)
-data.FillDummyStays()
+data.FillDummyJobs()
 
 
 # optimize initial schedule
