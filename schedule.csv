@@ -1,4 +1,4 @@
-GuestGroupName,RoomArrival,RoomDeparture,AdjacencyGroup,IsLocked,RoomNumber
+JobId,JobStart,JobFinish,AdjacencyGroup,IsLocked,MachineId
 1,2021-03-07 00:00:00.000,2021-03-14 00:00:00.000,,0,
 2,2021-03-07 00:00:00.000,2021-03-14 00:00:00.000,,0,
 3,2021-03-07 00:00:00.000,2021-03-12 00:00:00.000,,0,

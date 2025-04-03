@@ -31,7 +31,7 @@ data.FillDummyJobs()
 
 # optimize initial schedule
 m = opt.Solver(data)
-m.OptimizeGaps = True
+m.OptimizeGaps = False
 m.OptimizeSchedule()
 
 '''

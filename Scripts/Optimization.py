@@ -76,7 +76,7 @@ class Solver:
 			dummy = i in self.DummyJobs
 			if dummy and checkDummyAssignments:
 				
-				for j in rooms:
+				for j in Machines:
 				
 					dVal = self.Model.getVal(self.DummyAssignmentVars[i,j])
 					aVal = self.Model.getVal(self.AssignmentVars[i,j])
@@ -89,7 +89,7 @@ class Solver:
 					newSol.AssignmentValues[i,j] = aVal
 						
 			elif not dummy:
-				for j in self.Inputs.Rooms:
+				for j in self.Inputs.Machines:
 					aVal = self.Model.getVal(self.AssignmentVars[i,j])
 					if aVal > 0.99:
 						self.OptimizationAssignments[i] = j
@@ -139,7 +139,7 @@ class Solver:
 		obj = 0.0
 		
 		if self.OptimizeGaps:
-			obj = quicksum(self.ObjectiveCoefficients[s]*self.AssignmentVars[s,r] for s in self.ObjectiveCoefficients for r in self.Inputs.Rooms) + 10*quicksum(self.SlackOddGroups[s,r] for s in self.AdjacentReservations for r in self.Inputs.AdjacentRooms)
+			obj = quicksum(self.ObjectiveCoefficients[s]*self.AssignmentVars[s,r] for s in self.ObjectiveCoefficients for r in self.Inputs.Machines) + 10*quicksum(self.SlackOddGroups[s,r] for s in self.AdjacentReservations for r in self.Inputs.AdjacentMachines)
 
 		self.Model.setObjective(obj,"minimize")
 
@@ -182,22 +182,22 @@ class Solver:
 	def AddAssignmentModel(self, addDummyIncentiveVars, dummyLimits):
 		
 		for s in self.Inputs.JobDict:
-			for r in self.Inputs.Rooms:
+			for r in self.Inputs.Machines:
 				name = str(s)+ ", " + str(r)
 				self.AssignmentVars[s,r] = self.Model.addVar(name,vtype= 'B')
 
 
 		for s in self.Inputs.JobDict:
 			
-			if s in self.Inputs.FixedRooms:
-				self.Model.addCons(self.AssignmentVars[s,self.Inputs.FixedRooms[s]] == 1)
+			if s in self.Inputs.FixedMachines:
+				self.Model.addCons(self.AssignmentVars[s,self.Inputs.FixedMachines[s]] == 1)
 				
 			if self.Inputs.GroupDict[s] == -1: # i.e. if it's a dummy Job
 				
 				length = self.Inputs.LengthDict[s]
 				self.DummyJobs.append(s)
 		
-				maxGaps = self.Inputs.NumberOfRooms
+				maxGaps = self.Inputs.NumberOfMachines
 				
 				'''
 				TODO - Think about whether this is necessary! 
@@ -220,7 +220,7 @@ class Solver:
 					print("reduced the dummy limits")
 					maxGaps = dummyLimits[(self.Inputs.JobDict[s][0], length)]
 				
-				self.Model.addCons(quicksum(self.AssignmentVars[s,r] for r in self.Inputs.Rooms) <= maxGaps)
+				self.Model.addCons(quicksum(self.AssignmentVars[s,r] for r in self.Inputs.Machines) <= maxGaps)
 				# this incentivizes gaps longer than min Job length
 				extra = 0
 				if length <= self.Inputs.MinJob + 2:
@@ -231,14 +231,14 @@ class Solver:
 				if addDummyIncentiveVars:
 					
 				
-					for r in rooms:
+					for r in Machines:
 						self.DummyIncentiveVars[s,r] = m.addVar(name,vtype= 'B')
 						self.Model.addCons(self.DummyIncentiveVars[s,r] <= self.AssignmentVars[s,r])
 				
-					self.Model.addCons(quicksum(self.DummyIncentiveVars[s,r] for r in self.Inputs.Rooms) <= 1)				
+					self.Model.addCons(quicksum(self.DummyIncentiveVars[s,r] for r in self.Inputs.Machines) <= 1)				
 	
 			else:
-				self.Model.addCons(quicksum(self.AssignmentVars[s,r] for r in self.Inputs.Rooms) == 1)
+				self.Model.addCons(quicksum(self.AssignmentVars[s,r] for r in self.Inputs.Machines) == 1)
 		return()
 	
 	
@@ -262,15 +262,15 @@ class Solver:
 			for s in aJobs:
 				adjacentReservations.append(s)
 				connectedJobs = [cnctdJob for cnctdJob in aJobs if cnctdJob != s] 
-				for r in self.Inputs.RoomAdjacencyLists:
+				for r in self.Inputs.MachineAdjacencyLists:
 					Oname = str(s)+ ", " + str(r) + '_SlackOdd'
 					slackOddGroups[s,r] = self.Model.addVar(Oname,vtype= 'B',lb = 0,ub = oddUb)
-					self.Model.addCons(self.AssignmentVars[s,r] <= quicksum(self.AssignmentVars[cs,ar] for cs in connectedJobs for ar in self.Inputs.RoomAdjacencyLists[r]) + slackOddGroups[s,r])
+					self.Model.addCons(self.AssignmentVars[s,r] <= quicksum(self.AssignmentVars[cs,ar] for cs in connectedJobs for ar in self.Inputs.MachineAdjacencyLists[r]) + slackOddGroups[s,r])
 		
-				self.Model.addCons(quicksum(self.AssignmentVars[s,r] for r in self.Inputs.AdjacentRooms) >= 1 - quicksum(slackOddGroups[s,r] for r in self.Inputs.AdjacentRooms))
+				self.Model.addCons(quicksum(self.AssignmentVars[s,r] for r in self.Inputs.AdjacentMachines) >= 1 - quicksum(slackOddGroups[s,r] for r in self.Inputs.AdjacentMachines))
 	
 			# sum of all odd slacks <= 1     
-			self.Model.addCons(quicksum(slackOddGroups[s,r] for s in aJobs for r in self.Inputs.AdjacentRooms) <= 1)
+			self.Model.addCons(quicksum(slackOddGroups[s,r] for s in aJobs for r in self.Inputs.AdjacentMachines) <= 1)
 	
 		self.SlackOddGroups = slackOddGroups
 		self.AdjacentReservations = adjacentReservations
@@ -278,7 +278,7 @@ class Solver:
 		
 		
 	def AddCliqueConstraints(self, addDummyIncentives):
-		for r in self.Inputs.Rooms:
+		for r in self.Inputs.Machines:
 			#k = 0
 			for c in self.Cliques:
 				self.Model.addCons(quicksum(self.AssignmentVars[s,r] for s in c) == 1)
@@ -288,7 +288,7 @@ class Solver:
 		if addDummyIncentives:
 			for c in cliques:
 				dummies = [s for s in c if s in self.DummyJobs]
-				self.Model.addCons(quicksum(self.DummyIncentiveVars[s,r] for s in dummies for r in self.Inputs.Rooms) <= 1)
+				self.Model.addCons(quicksum(self.DummyIncentiveVars[s,r] for s in dummies for r in self.Inputs.Machines) <= 1)
 	
 		return()	
 	

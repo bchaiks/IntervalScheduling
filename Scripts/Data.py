@@ -16,17 +16,17 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
 class RawSchedule:
-	def __init__(self, scheduleFile, roomInfoFile):
-		self.ArrivalKey = "arrOrdinal"
-		self.DepartureKey = "depOrdinal"
+	def __init__(self, scheduleFile, machineInfoFile):
+		self.StartKey = "startOrdinal"
+		self.FinishKey = "finishOrdinal"
 		self.IsLockedKey = "IsLocked"
 		self.AdjacencyGroupKey = "AdjacencyGroup"
-		self.RoomKey = "Room"
+		self.MachineKey = "Machine"
 		self.LengthKey = "Length"
-		self.RoomNumberKey = "RoomNumber"
-		self.GroupNameKey = "GuestGroupName"
+		self.MachineNumberKey = "MachineId"
+		self.GroupNameKey = "JobId"
 		self.Schedule = self.ReadFile(scheduleFile, True)
-		self.RoomInfo = self.ReadFile(roomInfoFile, False)
+		self.MachineInfo = self.ReadFile(machineInfoFile, False)
 	
 	def ReadFile(self, filePath, reformat):
 		df = pd.read_csv(filePath)
@@ -35,14 +35,14 @@ class RawSchedule:
 		return(df)
 	
 	def ReformatSchedule(self, sched):
-		sched["Arrival"] = pd.to_datetime(sched["RoomArrival"]).dt.date
-		sched["Departure"] = pd.to_datetime(sched["RoomDeparture"]).dt.date
-		sched = sched.drop(["RoomArrival","RoomDeparture"],axis=1)
+		sched["Start"] = pd.to_datetime(sched["JobStart"]).dt.date
+		sched["Finish"] = pd.to_datetime(sched["JobFinish"]).dt.date
+		sched = sched.drop(["JobStart","JobFinish"],axis=1)
 		# convert the dates to ordinal values. These are convenient for operating on the intervals.
-		sched[self.ArrivalKey] = sched["Arrival"].apply(lambda x: x.toordinal())
-		sched[self.DepartureKey] = sched["Departure"].apply(lambda x: x.toordinal())
+		sched[self.StartKey] = sched["Start"].apply(lambda x: x.toordinal())
+		sched[self.FinishKey] = sched["Finish"].apply(lambda x: x.toordinal())
 		# compute the length of the Jobs, needed for the sorting in the heuristic approaches.
-		sched['Length'] = sched[self.DepartureKey] - sched[self.ArrivalKey]
+		sched['Length'] = sched[self.FinishKey] - sched[self.StartKey]
 		sched["DummyLength"] = np.zeros(len(sched))
 		
 		return(sched)
@@ -50,12 +50,12 @@ class RawSchedule:
 
 class InputData:
 	def __init__(self, minJob = 5, maxDummy = 3):
-		self.Rooms = []
+		self.Machines = []
 		
-		self.NumberOfRooms = 0
+		self.NumberOfMachines = 0
 		
-		self.AdjacentRooms = []
-		self.RoomAdjacencyLists = {}
+		self.AdjacentMachines = []
+		self.MachineAdjacencyLists = {}
 		self.JobAdjacencyLists = {}
 		
 		self.NumberOfRealReservations = 0
@@ -68,7 +68,7 @@ class InputData:
 		self.JobDict = {}
 		self.StartDict = {}
 		self.LengthDict = {}
-		self.FixedRooms = {}
+		self.FixedMachines = {}
 		
 		self.DummyJobs = {}
 		
@@ -91,37 +91,15 @@ class InputData:
 		self.TestMaxName = "test_max"
 	
 
-	def LoadFromJson(self, jsonInput):
-		# do some stuff... 
-		return()
-	
-	def AddNewReservation(self, startDate, length):
-		self.ClearDummyJobs()
-		key = len(self.JobDict)
-		
-		self.GroupDict[key] = self.TestMaxName
-		
-		self.JobDict[key] = [startDate, startDate + length]
-		self.StartDict[key] = startDate
-		self.LengthDict[key] = length
-		
-		return(key)
-	
-	
-	def RemoveNewReservation(self, key):
-		del(self.GroupDict[key])
-		del(self.JobDict[key])
-		del(self.StartDict[key])
-		del(self.LengthDict[key])
-		return()
+
 	
 	
 	def FillAdjacencyInfo(self, rawInput):
 		sched = rawInput.Schedule
-		roomInfo = rawInput.RoomInfo
+		MachineInfo = rawInput.MachineInfo
 		
 		adjGrpKey = rawInput.AdjacencyGroupKey
-		roomKey = rawInput.RoomKey
+		MachineKey = rawInput.MachineKey
 			
 		adjacentJobDict = {}
 		for i in range(len(sched)):
@@ -133,22 +111,22 @@ class InputData:
 		
 		self.JobAdjacencyLists = adjacentJobDict
 		
-		for i in range(len(roomInfo)-1):
-			for j in range(i+1,len(roomInfo)):
-				if roomInfo[str(roomInfo[roomKey][j])][i] == 1:
-					if roomInfo[roomKey][i] not in self.RoomAdjacencyLists:
-						self.RoomAdjacencyLists[roomInfo[roomKey][i]] = []
-						self.AdjacentRooms.append(roomInfo[roomKey][i])
+		for i in range(len(MachineInfo)-1):
+			for j in range(i+1,len(MachineInfo)):
+				if MachineInfo[str(MachineInfo[MachineKey][j])][i] == 1:
+					if MachineInfo[MachineKey][i] not in self.MachineAdjacencyLists:
+						self.MachineAdjacencyLists[MachineInfo[MachineKey][i]] = []
+						self.AdjacentMachines.append(MachineInfo[MachineKey][i])
 				
-					if roomInfo[roomKey][j] not in self.RoomAdjacencyLists:
-						self.RoomAdjacencyLists[roomInfo[roomKey][j]] = []
-						self.AdjacentRooms.append(roomInfo[roomKey][j])
+					if MachineInfo[MachineKey][j] not in self.MachineAdjacencyLists:
+						self.MachineAdjacencyLists[MachineInfo[MachineKey][j]] = []
+						self.AdjacentMachines.append(MachineInfo[MachineKey][j])
 		
-					self.RoomAdjacencyLists[roomInfo[roomKey][i]].append(roomInfo[roomKey][j])
-					self.RoomAdjacencyLists[roomInfo[roomKey][j]].append(roomInfo[roomKey][i])
+					self.MachineAdjacencyLists[MachineInfo[MachineKey][i]].append(MachineInfo[MachineKey][j])
+					self.MachineAdjacencyLists[MachineInfo[MachineKey][j]].append(MachineInfo[MachineKey][i])
 		
-		self.Rooms = np.unique(np.array(roomInfo[roomKey]))
-		self.NumberOfRooms = len(self.Rooms)
+		self.Machines = np.unique(np.array(MachineInfo[MachineKey]))
+		self.NumberOfMachines = len(self.Machines)
 
 	
 	def FillStartAndEndInfo(self, rawInfo, endExtension = -1, startExtension = -1):	
@@ -160,8 +138,8 @@ class InputData:
 		ACTUALLY let the limit be an input, and then it will go to 
 		min(limit, maxEnd + minJob + 1)
 		'''
-		startDates = np.unique(np.array(rawInfo.Schedule[rawInfo.ArrivalKey]))
-		endDates = np.unique(np.array(rawInfo.Schedule[rawInfo.DepartureKey]))
+		startDates = np.unique(np.array(rawInfo.Schedule[rawInfo.StartKey]))
+		endDates = np.unique(np.array(rawInfo.Schedule[rawInfo.FinishKey]))
 		self.MinStart = min(startDates)
 		self.MaxStart = max(startDates)
 		self.MaxEnd = max(endDates)
@@ -179,15 +157,15 @@ class InputData:
 	def FillRealJobInfo(self, rawInfo):
 		sched = rawInfo.Schedule
 		self.NumberOfRealReservations = len(sched)
-		arr = rawInfo.ArrivalKey
-		dep = rawInfo.DepartureKey
+		arr = rawInfo.StartKey
+		dep = rawInfo.FinishKey
 		for i in range(self.NumberOfRealReservations):
 			self.GroupDict[i] = sched[rawInfo.GroupNameKey][i]
 			self.JobDict[i] = [sched[arr][i],sched[dep][i]]
 			self.StartDict[i] = sched[arr][i]
 			self.LengthDict[i] = sched[rawInfo.LengthKey][i]
 			if sched[rawInfo.IsLockedKey][i] == 1:
-				self.FixedRooms[i] = int(sched[rawInfo.RoomNumberKey][i])
+				self.FixedMachines[i] = int(sched[rawInfo.MachineNumberKey][i])
 	
 	
 	
@@ -266,32 +244,32 @@ class InputData:
 			size = (12,12)
 			
 		fig, ax = plt.subplots(figsize = size)   
-		ax.set_ylim(1,self.NumberOfRooms + 1)
+		ax.set_ylim(1,self.NumberOfMachines + 1)
 		ax.set_xlim(-1, self.ScheduleEnd-self.ScheduleStart + 1)
 		ax.set_axisbelow(True)
-		roomMap = {}
+		MachineMap = {}
 		maxY = 0
 		rmSigns = {}
-		for i in range(self.NumberOfRooms):
-			roomMap[self.Rooms[i]] = i + 1
-			rmSigns[self.Rooms[i]] = 1.0
+		for i in range(self.NumberOfMachines):
+			MachineMap[self.Machines[i]] = i + 1
+			rmSigns[self.Machines[i]] = 1.0
 			maxY =i+2
 	
 		tcks = np.arange(self.ScheduleStart, self.ScheduleEnd + 1)
 		tcks = [t - self.ScheduleStart for t in tcks]
-		rmtcks = np.arange(self.NumberOfRooms + 1)
+		rmtcks = np.arange(self.NumberOfMachines + 1)
 		
 		#plt.text(0.5,1,"Start", fontsize = fontSize)
 		#plt.text(self.ScheduleEnd - self.ScheduleStart - 0.5,1,"end", fontsize = fontSize)	
 		if self.BoundSchedule:
-			ax.add_patch(Rectangle((0,0), width = 0.5, height=self.NumberOfRooms+1, alpha=0.3,
+			ax.add_patch(Rectangle((0,0), width = 0.5, height=self.NumberOfMachines+1, alpha=0.3,
 									   edgecolor = 'black', facecolor = 'black'))
-			ax.add_patch(Rectangle((self.ScheduleEnd - self.ScheduleStart + 0.5,0), width = 0.5, height=self.NumberOfRooms+1, alpha=0.3,
+			ax.add_patch(Rectangle((self.ScheduleEnd - self.ScheduleStart + 0.5,0), width = 0.5, height=self.NumberOfMachines+1, alpha=0.3,
 									   edgecolor = 'black', facecolor = 'black'))
 		
 		
 		for i in assignments:
-			rm = roomMap[assignments[i]]
+			rm = MachineMap[assignments[i]]
 			JobLength = test[1] 
 			start = test[0]
 			if i in self.JobDict:
@@ -299,7 +277,7 @@ class InputData:
 				start = self.JobDict[i][0]
 			
 			color = 'gray'
-			if i in self.FixedRooms:
+			if i in self.FixedMachines:
 				color = 'red'
 			for s in self.JobAdjacencyLists:
 				if i in self.JobAdjacencyLists[s]:
@@ -327,7 +305,7 @@ class InputData:
 		
 		plt.grid()
 		labels = ['']
-		for r in self.Rooms:
+		for r in self.Machines:
 			labels.append(str(r))
 		plt.xticks(ticks = tcks, labels = tcks, rotation='vertical', fontsize = 6)
 		plt.yticks(ticks = rmtcks,labels = labels, fontsize = 6)
