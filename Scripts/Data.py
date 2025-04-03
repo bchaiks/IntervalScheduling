@@ -2,9 +2,6 @@
 Functions for loading 
 a schedule, and for making a copy with 
 specific dummy values for different purposes 
-(i.e. initial optimal schedule, schedule with 
-additional/optimized min/max Jobs that do not 
-violate the naive min-night-Job etc.)
 '''
 
 import pandas as pd
@@ -76,14 +73,7 @@ class InputData:
 		self.MaxStart = -1
 		self.MaxEnd = -1
 		
-		
-		'''
-		So actually, looks like this just needs to tell you when the next/previous arrival is.
-		or like, how many days to consider are totally open before/after this schedule snippet! 
-		what this really does is put a limit on how far the last dummy Jobs extend beyond the 
-		end, which will affect feasibility when we limit the number of small gaps
-		during the feasibility portion.
-		'''
+	
 		self.ScheduleStart = -1
 		self.ScheduleEnd = -1
 		self.BoundSchedule = False
@@ -130,14 +120,7 @@ class InputData:
 
 	
 	def FillStartAndEndInfo(self, rawInfo):	
-	
-		'''
-		TODO -- need to think about how to add MinJob + 1 days on the end, and then 
-		let the last set of dummy values go all the way out
-		
-		ACTUALLY let the limit be an input, and then it will go to 
-		min(limit, maxEnd + minJob + 1)
-		'''
+
 		startDates = np.unique(np.array(rawInfo.Schedule[rawInfo.StartKey]))
 		endDates = np.unique(np.array(rawInfo.Schedule[rawInfo.FinishKey]))
 		self.MinStart = min(startDates)
@@ -180,10 +163,7 @@ class InputData:
 					continue
 					
 				elif self.MinStart + i + days <= self.MaxEnd + 1:			
-					# maybe add a few extra beyond the real end??
-					# probably doesn't matter though...
-					# then remember to just add clique sum to 1 constraints
-					# up to the MaxEnd!!!! 
+	
 					self.GroupDict[j] = -1
 					self.JobDict[j] = [self.MinStart + i, self.MinStart + i + days]
 					self.StartDict[j] =  self.MinStart + i
@@ -253,8 +233,6 @@ class InputData:
 		tcks = [t - self.ScheduleStart for t in tcks]
 		rmtcks = np.arange(self.NumberOfMachines + 1)
 		
-		#plt.text(0.5,1,"Start", fontsize = fontSize)
-		#plt.text(self.ScheduleEnd - self.ScheduleStart - 0.5,1,"end", fontsize = fontSize)	
 		if self.BoundSchedule:
 			ax.add_patch(Rectangle((0,0), width = 0.5, height=self.NumberOfMachines+1, alpha=0.3,
 									   edgecolor = 'black', facecolor = 'black'))
@@ -287,8 +265,7 @@ class InputData:
 			else: 
 				grpName = self.TestMaxName
 				color = 'yellow'
-			# want to change the color of the min Job... 
-			# and max Job, I guess... 
+
 		
 			ax.add_patch(Rectangle((start - self.ScheduleStart + 0.5,rm-0.4), width = JobLength, height=.8, alpha=0.5,
 								   edgecolor = 'black', facecolor = color))
