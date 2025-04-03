@@ -129,7 +129,7 @@ class InputData:
 		self.NumberOfMachines = len(self.Machines)
 
 	
-	def FillStartAndEndInfo(self, rawInfo, endExtension = -1, startExtension = -1):	
+	def FillStartAndEndInfo(self, rawInfo):	
 	
 		'''
 		TODO -- need to think about how to add MinJob + 1 days on the end, and then 
@@ -145,13 +145,7 @@ class InputData:
 		self.MaxEnd = max(endDates)
 		self.ScheduleEnd = self.MaxEnd
 		self.ScheduleStart = self.MinStart
-		if endExtension > 0:
-			# this extends the schedule so that the model does not consider short Jobs 
-			# at the end as problematic
-			self.ScheduleEnd += endExtension 
-			self.BoundSchedule = True
-		if startExtension > 0 :
-			self.ScheduleStart -= startExtension 
+
 		
 
 	def FillRealJobInfo(self, rawInfo):
