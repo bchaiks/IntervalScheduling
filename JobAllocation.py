@@ -1,13 +1,10 @@
-'''
-Refactoring the notebooks to be in a script for easier 
-management
 
-'''
 
 import Scripts.Data as sd
 import Scripts.Optimization as opt
 import numpy as np
 import time
+import sys
 
 sFile = f"schedule.csv"
 rFile = f"machine_info.csv"
@@ -26,7 +23,8 @@ data.FillDummyJobs()
 
 # optimize initial schedule
 m = opt.Solver(data)
-m.OptimizeGaps = False
+optGaps = input("Optimize remaining gaps? (y/n) ")
+m.OptimizeGaps = optGaps == "y"
 m.OptimizeSchedule()
 
 '''

@@ -151,9 +151,6 @@ class Solver:
 		self.Model.setRealParam('limits/gap', 0.01) # stop at 99% of optimality
 		self.Model.setParam('limits/time', 60) # stop after 1 minute
 		
-		print("Checking count of feasible sols:")
-		print(self.Model.getNCountedSols())
-		print()
 		
 		self.Model.hideOutput(True)
 		self.Model.optimize()
